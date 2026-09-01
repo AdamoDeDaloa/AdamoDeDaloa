@@ -1,4 +1,4 @@
-# CLAUDE.md — App Streetball
+# CLAUDE.md — Be4Ball
 
 Les règles du jeu pour ce projet. Voir `ROADMAP.md` pour le "où on va" (NOW/NEXT/LATER).
 

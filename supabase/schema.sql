@@ -1,4 +1,4 @@
--- Streetball App — J2 — table "terrains"
+-- Be4Ball — J2 — table "terrains"
 -- À exécuter dans Supabase (SQL Editor) avant de brancher le scénario Make.
 -- MVP J2 = 1 table (voir claude.md). Pas de users, alerts, categories tant
 -- que le MVP n'en a pas besoin.
