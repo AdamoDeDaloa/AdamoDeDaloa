@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Streetball — Trouve ton match</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -252,6 +253,104 @@
     header h1 { font-size: 28px; }
     .grid { grid-template-columns: 1fr; }
   }
+
+  /* Onglets Sessions / Carte France */
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+    border-top: 1px solid rgba(245,242,236,0.12);
+    padding-top: 16px;
+  }
+
+  .tab {
+    padding: 9px 4px;
+    font-size: 13px;
+    font-weight: 700;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: rgba(245,242,236,0.5);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .tab.active {
+    color: var(--chalk);
+    border-bottom-color: var(--orange);
+  }
+
+  [data-view] { display: none; }
+  [data-view].active { display: block; }
+
+  /* Carte France */
+  .carte-layout {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 16px;
+    align-items: start;
+  }
+
+  #carte-map {
+    height: 560px;
+    border-radius: 20px;
+    background: #dfe3e6;
+  }
+
+  .carte-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 560px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  .terrain-item {
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .terrain-item:hover, .terrain-item.active {
+    border-color: var(--orange);
+  }
+  .terrain-item h4 {
+    font-size: 13.5px;
+    margin: 0 0 2px;
+  }
+  .terrain-item .terrain-place {
+    font-size: 11.5px;
+    color: rgba(21,25,29,0.55);
+    margin-bottom: 4px;
+  }
+  .terrain-item .terrain-accroche {
+    font-size: 11.5px;
+    color: rgba(21,25,29,0.75);
+    font-style: italic;
+  }
+
+  .carte-banner {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+    color: rgba(21,25,29,0.7);
+    border-left: 3px solid var(--orange);
+  }
+  .carte-banner code {
+    background: var(--concrete);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  @media (max-width: 800px) {
+    .carte-layout { grid-template-columns: 1fr; }
+    #carte-map { height: 320px; }
+    .carte-list { max-height: 360px; }
+  }
 </style>
 </head>
 <body>
@@ -268,12 +367,29 @@
     <button class="pill" data-level="Intermédiaire">Intermédiaire</button>
     <button class="pill" data-level="Confirmé">Confirmé</button>
   </div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-tab="sessions">Sessions du quartier</button>
+    <button class="tab" data-tab="carte">Carte France</button>
+  </div>
 </header>
 
 <main>
-  <div id="count"></div>
-  <div class="grid" id="grid"></div>
-  <div id="empty">Aucun terrain ne correspond à ta recherche.</div>
+  <section data-view="sessions" class="active">
+    <div id="count"></div>
+    <div class="grid" id="grid"></div>
+    <div id="empty">Aucun terrain ne correspond à ta recherche.</div>
+  </section>
+
+  <section data-view="carte">
+    <div class="carte-banner" id="carte-banner"></div>
+    <div class="search-row" style="margin-bottom: 14px;">
+      <input id="carte-search" type="text" placeholder="Chercher une commune ou un terrain..." />
+    </div>
+    <div class="carte-layout">
+      <div class="carte-list" id="carte-list"></div>
+      <div id="carte-map"></div>
+    </div>
+  </section>
 </main>
 
 <div id="overlay">
@@ -404,6 +520,133 @@
   });
 
   render();
+
+  // Onglets Sessions / Carte France
+  document.getElementById("tabs").addEventListener("click", (e) => {
+    if (!e.target.classList.contains("tab")) return;
+    const tabName = e.target.dataset.tab;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    e.target.classList.add("active");
+    document.querySelectorAll("[data-view]").forEach(v => v.classList.remove("active"));
+    document.querySelector(`[data-view="${tabName}"]`).classList.add("active");
+    if (tabName === "carte") initCarteFrance();
+  });
+</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  // Carte France — J2 : lecture (READ) de la table "terrains" alimentée par
+  // le scénario Make (voir automation/MAKE_SCENARIO.md). Renseigne ces deux
+  // valeurs avec ton propre projet Supabase pour brancher les vraies données.
+  const SUPABASE_URL = "";
+  const SUPABASE_ANON_KEY = "";
+
+  // Exemple de démonstration affiché tant que Supabase n'est pas configuré,
+  // pour que la carte ne soit pas vide pendant le développement.
+  const DEMO_TERRAINS = [
+    {
+      nom: "Terrain de basket-ball — exemple", commune: "Paris", code_postal: "75011",
+      latitude: 48.8589, longitude: 2.3778, type_equipement: "City stade",
+      ai_accroche: "Exemple affiché en attendant la connexion à Supabase.",
+      ai_categorie: "Plein air"
+    }
+  ];
+
+  let carteInitialized = false;
+  let carteMap = null;
+  let carteMarkers = [];
+  let allTerrains = [];
+  let carteSearchTerm = "";
+
+  function initCarteFrance() {
+    if (carteInitialized) return;
+    carteInitialized = true;
+
+    const banner = document.getElementById("carte-banner");
+    const isConfigured = SUPABASE_URL && SUPABASE_ANON_KEY;
+
+    carteMap = L.map("carte-map").setView([46.6, 2.4], 5.5); // centré sur la France
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors",
+      maxZoom: 19
+    }).addTo(carteMap);
+
+    document.getElementById("carte-search").addEventListener("input", (e) => {
+      carteSearchTerm = e.target.value.toLowerCase();
+      renderCarte();
+    });
+
+    if (!isConfigured) {
+      banner.innerHTML = `Supabase n'est pas encore branché — exemple de démonstration affiché.
+        Renseigne <code>SUPABASE_URL</code> et <code>SUPABASE_ANON_KEY</code> dans
+        <code>streetball-app.html</code> une fois le scénario Make en place
+        (voir <code>automation/MAKE_SCENARIO.md</code>).`;
+      allTerrains = DEMO_TERRAINS;
+      renderCarte();
+      return;
+    }
+
+    banner.textContent = "Chargement des terrains...";
+    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const timeout = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("délai dépassé (8s)")), 8000)
+    );
+    Promise.race([client.from("terrains").select("*").limit(500), timeout])
+      .then(({ data, error }) => {
+        if (error) {
+          banner.textContent = "Erreur de connexion à Supabase : " + error.message;
+          allTerrains = DEMO_TERRAINS;
+          renderCarte();
+          return;
+        }
+        allTerrains = data || [];
+        banner.textContent = allTerrains.length
+          ? allTerrains.length + " terrains chargés depuis Supabase."
+          : "Connecté à Supabase, mais la table \"terrains\" est vide pour l'instant.";
+        renderCarte();
+      })
+      .catch((err) => {
+        banner.textContent = "Impossible de joindre Supabase (" + err.message + "). Exemple de démonstration affiché.";
+        allTerrains = DEMO_TERRAINS;
+        renderCarte();
+      });
+  }
+
+  function renderCarte() {
+    const list = document.getElementById("carte-list");
+    carteMarkers.forEach(m => carteMap.removeLayer(m));
+    carteMarkers = [];
+    list.innerHTML = "";
+
+    const q = carteSearchTerm;
+    const filtered = allTerrains.filter(t => {
+      if (!q) return true;
+      return (t.nom || "").toLowerCase().includes(q) || (t.commune || "").toLowerCase().includes(q);
+    });
+
+    filtered.forEach(t => {
+      if (typeof t.latitude === "number" && typeof t.longitude === "number") {
+        const marker = L.marker([t.latitude, t.longitude]).addTo(carteMap);
+        marker.bindPopup(`<strong>${t.nom}</strong><br/>${t.commune || ""}`);
+        carteMarkers.push(marker);
+      }
+
+      const item = document.createElement("div");
+      item.className = "terrain-item";
+      item.innerHTML = `
+        <h4>${t.nom}</h4>
+        <div class="terrain-place">${[t.commune, t.type_equipement].filter(Boolean).join(" · ")}</div>
+        ${t.ai_accroche ? `<div class="terrain-accroche">${t.ai_accroche}</div>` : ""}
+      `;
+      item.addEventListener("click", () => {
+        if (typeof t.latitude === "number" && typeof t.longitude === "number") {
+          carteMap.setView([t.latitude, t.longitude], 14);
+        }
+      });
+      list.appendChild(item);
+    });
+  }
 </script>
 
 </body>

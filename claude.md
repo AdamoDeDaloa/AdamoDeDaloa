@@ -27,6 +27,7 @@ Application mobile d'idéation — projet du Mastère 1 Data & Customer Experien
 - Palette : asphalte `#15191D` (fond), orange ballon `#FF6B2C` (accent/CTA), vert filet `#2F6E52` (accent secondaire), blanc craie `#F5F2EC` (texte sur fond sombre), béton clair `#E8E3DA` (fond clair)
 - Typographie : Archivo Black (titres), Inter (texte courant)
 - Stack technique du sprint J1 : HTML/JS autonome (single file), données fictives en dur — pas de backend à ce stade
+- Stack technique J2 (ajoutée sans remplacer le J1) : Make (automatisation) → Claude (enrichissement IA) → Supabase (BDD) → lecture dans `streetball-app.html` via Leaflet (carte) + `@supabase/supabase-js` (lecture seule, clé anon)
 
 ## Méthode
 
@@ -82,10 +83,66 @@ nécessaire.
 
 **J1 Build : terminé.**
 
+## Sprint J2 (Automate)
+
+Objectif du brief : `SOURCE → AUTOMATISATION → IA → BDD → FRONTEND`, une donnée
+qui voyage de bout en bout — pas 500 terrains d'un coup.
+
+**Contrainte découverte en route** : cette session Claude Code tourne dans un
+environnement au réseau sortant restreint (proxy egress avec liste blanche par
+domaine) — impossible d'appeler data.gouv.fr, l'API Data ES, Supabase ou même
+des CDN comme unpkg/jsdelivr depuis ce sandbox pour les *tester* en direct.
+Cela ne concerne que cette session de développement : une fois le fichier
+hébergé (GitHub Pages, machine perso, etc.), tous ces appels fonctionnent
+normalement pour les vrais visiteurs.
+
+**Source retenue** : Data ES — Recensement des Équipements Sportifs, ministère
+chargé des Sports (`equipements.sports.gouv.fr`), plus de 330 000 équipements
+sportifs en France, mis à jour quotidiennement, exhaustif et gratuit. C'est la
+base de données complète demandée — bien plus fiable qu'un recensement manuel.
+
+**Ce qui a été construit dans le repo**
+- `supabase/schema.sql` — table `terrains` (1 seule table, MVP J2, comme
+  enseigné : champs bruts + `ai_accroche`/`ai_categorie` enrichis par Claude)
+- `automation/MAKE_SCENARIO.md` — recette module par module du scénario Make
+  (TRIGGER Schedule → GET Data ES → TRANSFORM → AI Claude → SAVE Supabase),
+  avec le mapping exact des champs, à construire et tester dans Make toi-même
+  (je n'ai pas accès à ton compte Make ni à ton projet Supabase)
+- `streetball-app.html` — nouvel onglet **"Carte France"** à côté des
+  "Sessions du quartier" du J1 : carte Leaflet + liste, lecture (READ) de la
+  table `terrains` via `@supabase/supabase-js` (clé anon, lecture seule).
+  Tant que `SUPABASE_URL`/`SUPABASE_ANON_KEY` (en tête du script carte) ne
+  sont pas renseignés, un terrain d'exemple s'affiche pour que l'écran ne
+  soit jamais vide pendant le développement.
+
+**Testé (Chromium, avec les vraies librairies Leaflet/Supabase servies en
+local pour contourner la restriction réseau du sandbox)** : bascule entre les
+deux onglets, recherche/filtre de l'onglet Sessions toujours fonctionnels
+après la bascule, carte + liste + recherche par commune sur l'onglet Carte
+France, timeout de 8s avec message clair si Supabase est injoignable (au lieu
+de rester bloqué sur "Chargement...").
+
+**Definition of Done — J2**
+- [x] Une vraie source identifiée (Data ES)
+- [ ] Un déclencheur Make (Schedule) — à créer dans ton compte Make
+- [ ] Un scénario Make qui tourne sans erreur — à construire avec `automation/MAKE_SCENARIO.md`
+- [ ] Un traitement IA (Claude) — prompt fourni, à brancher dans Make
+- [ ] Une écriture Supabase — `supabase/schema.sql` prêt à exécuter
+- [x] Une lecture Supabase depuis le frontend (onglet Carte France, code prêt)
+- [ ] Une donnée réelle visible dans l'app — dès que Make aura tourné une fois
+- [x] Le flux testé brique par brique côté code (voir ci-dessus)
+
+**Prochaine étape concrète** : exécuter `supabase/schema.sql` dans ton projet
+Supabase, construire le scénario Make en suivant `automation/MAKE_SCENARIO.md`
+module par module (en testant chaque module avant le suivant), puis renseigner
+`SUPABASE_URL`/`SUPABASE_ANON_KEY` dans `streetball-app.html`.
+
 ## Fichiers du projet
 
 - `claude.md` — ce fichier (règles du jeu)
 - `ROADMAP.md` — NOW / NEXT / LATER
-- `streetball-app.html` — interface fonctionnelle J1 (MUST)
+- `streetball-app.html` — interface J1 (Sessions du quartier) + J2 (Carte France)
 - `streetball-app-mockup.jsx` — mockup visuel initial (3 écrans, avant version fonctionnelle)
 - `streetball-app-wireframes.md` — documentation détaillée des wireframes v1
+- `supabase/schema.sql` — schéma de la table `terrains` (J2)
+- `automation/MAKE_SCENARIO.md` — recette du scénario Make (J2)

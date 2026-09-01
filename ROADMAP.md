@@ -10,7 +10,7 @@
 **SHOULD** (pas ce sprint, mais proches)
 - Créer une session soi-même (formulaire lieu/heure/niveau/places)
 - Profil joueur simple (pseudo, niveau, terrains habituels)
-- Carte géographique interactive (vraie carte, pas juste une liste)
+- ~~Carte géographique interactive (vraie carte, pas juste une liste)~~ → fait en J2, voir ci-dessous
 
 **COULD** (plus tard, si le temps le permet)
 - Badge de fiabilité / présence
@@ -18,10 +18,25 @@
 - Notifications de nouvelles sessions
 - Historique des sessions jouées
 
-## NEXT — J2 Automate
+## NOW — J2 Automate (récupérer les vrais terrains, source réelle)
 
-- Récupérer les vrais terrains d'une ville (source réelle plutôt que données fictives)
-- Automatiser la création/mise à jour des fiches terrain
+**MUST**
+- [x] Trouver une base de données complète des terrains de basket en France
+      → Data ES (Recensement des Équipements Sportifs, ministère des Sports),
+      330 000+ équipements, exhaustif, mis à jour quotidiennement
+- [x] Concevoir le schéma de données (table `terrains`, `supabase/schema.sql`)
+- [x] Décrire le scénario d'automatisation Make module par module
+      (`automation/MAKE_SCENARIO.md`) : TRIGGER → GET → TRANSFORM → AI → SAVE
+- [x] Ajouter la carte interactive au frontend (onglet "Carte France",
+      Leaflet + lecture Supabase), avec exemple de démo tant que Supabase
+      n'est pas branché
+- [ ] Construire réellement le scénario dans Make et exécuter `schema.sql`
+      dans Supabase (à faire côté utilisateur — Claude Code n'a pas accès à
+      ces comptes ni au réseau externe depuis ce sandbox)
+- [ ] Une vraie donnée qui a traversé tout le pipeline, visible dans l'app
+
+**SHOULD** (pas ce sprint, mais proches)
+- Automatiser la création/mise à jour des fiches terrain (upsert sur `source_id`)
 - Base de données des sessions (créées par les utilisateurs, en temps réel)
 - Notifications automatiques (rappel de session, nouvelle session près de chez soi)
 
