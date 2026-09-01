@@ -14,7 +14,7 @@
 
 **COULD** (plus tard, si le temps le permet)
 - Badge de fiabilité / présence
-- Favoris
+- ~~Favoris~~ → planifié en J3 (tool `add_favori` de l'agent, voir ci-dessous)
 - Notifications de nouvelles sessions
 - Historique des sessions jouées
 
@@ -40,11 +40,22 @@
 - Base de données des sessions (créées par les utilisateurs, en temps réel)
 - Notifications automatiques (rappel de session, nouvelle session près de chez soi)
 
-## LATER — J3 Augment
+## LATER — J3 Augment (préparé, à construire une fois le J2 terminé)
 
+Plan détaillé : `automation/AGENT_J3.md`. Un agent ≠ une automatisation — il
+reçoit un objectif et choisit lui-même son chemin (pas de TRIGGER→GET→SAVE fixe).
+
+**MUST du sprint J3**
+- [ ] Agent "Assistant Be4Ball" créé dans Make (section "AI Agents"), instructions cadrées
+- [ ] Tool READ : `search_terrains` (interroge la table `terrains`)
+- [ ] Tool WRITE : `add_favori` (nouvelle table `favoris`, schéma dans `AGENT_J3.md`)
+- [ ] Tool ACTION : `refresh_terrains` (relance le scénario Make du J2 à la demande)
+- [ ] Onglet "Assistant" ajouté à `streetball-app.html` (champ + réponse, connecté au webhook de l'agent)
+- [ ] Testé sur une demande claire, une ambiguë, une impossible (voir `AGENT_J3.md`)
+
+**Idées plus lointaines** (hors MVP agentique du J3)
 - Agent qui aide à organiser une session (propose un créneau selon les dispos du groupe)
 - Agent de matching par niveau (suggère les sessions les plus adaptées à un joueur)
-- Chatbot d'aide à la découverte ("trouve-moi un match ce soir near moi, niveau intermédiaire")
 
 ---
 
