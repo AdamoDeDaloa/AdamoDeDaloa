@@ -58,9 +58,29 @@ Application mobile d'idéation — projet du Mastère 1 Data & Customer Experien
 
 Livrable : `streetball-app.html` — interface fonctionnelle autonome, données fictives, interactions réelles (recherche live, filtres par niveau, ouverture de fiche détail, toggle "rejoindre la session"), responsive (grille 1 colonne en dessous de 640px).
 
-**Reste à faire pour boucler le J1**
-- [ ] Sprint de test : "casser" l'app (cas limites, recherche vide, redimensionnement d'écran) et corriger via la boucle O.D.C.T.
-- [ ] Vérifier la Definition of Done : interface fonctionnelle ✓ / données affichées ✓ / recherche-filtre ✓ / détail ✓ / testée ⬜ / stable ⬜
+**Sprint de test — fait (boucle O.D.C.T.)**
+
+Cas testés (navigateur réel, Chromium) : recherche vide, recherche sans résultat,
+recherche espaces uniquement, recherche insensible à la casse, filtre par niveau
+seul et combiné à la recherche (y compris combinaison à 0 résultat), ouverture/
+fermeture de la fiche détail (bouton fermer + clic extérieur), toggle rejoindre/
+quitter une session et persistance de l'état à la réouverture, redimensionnement
+jusqu'à 320px de large (grille 1 colonne, pas de débordement horizontal).
+
+Résultat : aucun bug bloquant. Seule anomalie relevée : l'`@import` Google Fonts
+échoue si le poste est hors ligne, mais les polices de fallback (`sans-serif`)
+prennent le relais sans casser l'affichage — non bloquant, pas de correction
+nécessaire.
+
+**Definition of Done — J1**
+- [x] Interface fonctionnelle
+- [x] Données affichées
+- [x] Recherche / filtre
+- [x] Détail (fiche + session + rejoindre)
+- [x] Testée
+- [x] Stable
+
+**J1 Build : terminé.**
 
 ## Fichiers du projet
 
