@@ -34,38 +34,41 @@ Plateforme Opendatasoft, hébergée sur `equipements.sports.gouv.fr`.
 - URL : `https://equipements.sports.gouv.fr/api/explore/v2.1/catalog/datasets/data-es/records`
 - Méthode : GET
 - Query string :
-  - `where` : filtre sur la discipline basket-ball (le nom exact du champ discipline
-    doit être vérifié dans l'aperçu de réponse Make — voir encadré ci-dessous)
-  - `limit` : commence à `20` pour le premier test, augmente une fois le flux validé
+  - `where` : `aps_name like "Basket"` (filtre sur la discipline pratiquée)
+  - `limit` : `20` pour les tests, à augmenter une fois le flux validé
 - Parse response : activer (Make convertit le JSON en structure exploitable)
 
-**⚠️ À vérifier toi-même avant de construire la suite** : je n'ai pas d'accès réseau
-sortant depuis cette session sandbox pour interroger l'API en direct, donc je ne
-peux pas te garantir les noms de champs exacts du JSON renvoyé. Lance ce module
-seul, ouvre l'onglet "Output" et note les vrais noms de champs (nom de
-l'équipement, commune, code postal, adresse, coordonnées GPS, type d'équipement,
-discipline). Ajuste le `where` et le mapping du module 2 en conséquence — c'est
-l'étape "Output inspecté" de la Definition of Done du Sprint 1.
+**Champs confirmés** (vérifiés en direct dans Make par Adama le 01/09, sur un
+run réel de l'API — voir capture d'écran du 1er septembre) :
 
-Noms de champs les plus probables sur ce jeu de données (à confirmer) :
-`inst_nom`, `equip_nom`, `equip_type_name`, `inst_adresse`, `inst_cp`,
-`inst_com_nom`, `equip_x`/`equip_y` ou `geo_point_2d`, `equip_aps_nom` (discipline).
+| Donnée | Champ Data ES réel |
+|---|---|
+| Identifiant unique | `equip_numero` |
+| Nom de l'équipement | `equip_nom` |
+| Commune | `new_name` |
+| Code postal | `inst_cp` |
+| Adresse | `inst_adresse` |
+| Latitude | `equip_y` |
+| Longitude | `equip_x` |
+| Type d'équipement | `equip_type_name` |
+| Accès libre (booléen) | `equip_acc_libre` |
+| Discipline(s) pratiquée(s) | `aps_name` (tableau, sert au filtre `where`) |
 
 ## Module 2 — TRANSFORM : Set variable(s)
 
 Prépare un item propre par terrain, à partir des champs bruts trouvés au module 1 :
 
-| Variable Make   | Vient de (champ Data ES, à confirmer) |
-|-----------------|----------------------------------------|
-| `source_id`     | identifiant de l'équipement             |
-| `nom`           | nom de l'équipement                     |
-| `commune`       | commune                                 |
-| `code_postal`   | code postal                             |
-| `adresse`       | adresse                                 |
-| `latitude`      | coordonnée Y / lat                      |
-| `longitude`     | coordonnée X / lon                      |
-| `type_equipement` | type d'équipement                     |
-| `acces_libre`   | à déduire du champ "accès libre" si présent, sinon `true` par défaut |
+| Variable Make      | Vient de (champ Data ES) |
+|---------------------|---------------------------|
+| `source_id`          | `equip_numero`            |
+| `nom`                | `equip_nom`                |
+| `commune`            | `new_name`                 |
+| `code_postal`        | `inst_cp`                  |
+| `adresse`            | `inst_adresse`              |
+| `latitude`           | `equip_y`                   |
+| `longitude`          | `equip_x`                    |
+| `type_equipement`    | `equip_type_name`            |
+| `acces_libre`        | `equip_acc_libre` (déjà un booléen `true`/`false`, mapping direct) |
 
 ## Module 3 — AI : Anthropic (Claude) — Create a Message
 
