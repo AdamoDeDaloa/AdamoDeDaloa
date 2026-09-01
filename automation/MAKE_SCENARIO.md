@@ -12,12 +12,20 @@ dans l'éditeur Make. `supabase/schema.sql` doit être exécuté avant de commen
 Construis et teste module par module (`A → TEST ✓`, puis `A → B → TEST ✓`, etc.) —
 ne chaîne jamais tout d'un coup avant le premier run.
 
-## Module 1 — TRIGGER : Scheduler
+## TRIGGER : programmation horaire du scénario
 
-- Type : **Schedule** (déclencheur temporel, pas Manuel/Webhook/Event)
-- Fréquence : 1x/jour suffit (le référentiel Data ES est mis à jour quotidiennement)
+Dans l'interface actuelle de Make, ce n'est pas un module à chercher/ajouter
+sur le canevas (chercher "Schedule" dans la recherche d'apps renvoie des apps
+tierces sans rapport, pas le bon outil). C'est un réglage du scénario entier :
 
-## Module 2 — GET : HTTP > Make a request
+1. Ajoute d'abord ton module 1 (GET, ci-dessous) — c'est lui le premier module
+   du canevas
+2. Clique l'icône **horloge** en bas à gauche du canevas (à côté du bouton
+   "Run once")
+3. Choisis **"At regular intervals"** → "Every 1 Days" (le référentiel Data ES
+   est mis à jour quotidiennement, pas besoin de plus fréquent)
+
+## Module 1 — GET : HTTP > Make a request
 
 Source : **Data ES**, le Recensement des Équipements Sportifs du ministère chargé
 des Sports — base ouverte et exhaustive (330 000+ équipements en France).
@@ -36,16 +44,16 @@ sortant depuis cette session sandbox pour interroger l'API en direct, donc je ne
 peux pas te garantir les noms de champs exacts du JSON renvoyé. Lance ce module
 seul, ouvre l'onglet "Output" et note les vrais noms de champs (nom de
 l'équipement, commune, code postal, adresse, coordonnées GPS, type d'équipement,
-discipline). Ajuste le `where` et le mapping du module 3 en conséquence — c'est
+discipline). Ajuste le `where` et le mapping du module 2 en conséquence — c'est
 l'étape "Output inspecté" de la Definition of Done du Sprint 1.
 
 Noms de champs les plus probables sur ce jeu de données (à confirmer) :
 `inst_nom`, `equip_nom`, `equip_type_name`, `inst_adresse`, `inst_cp`,
 `inst_com_nom`, `equip_x`/`equip_y` ou `geo_point_2d`, `equip_aps_nom` (discipline).
 
-## Module 3 — TRANSFORM : Set variable(s)
+## Module 2 — TRANSFORM : Set variable(s)
 
-Prépare un item propre par terrain, à partir des champs bruts trouvés au module 2 :
+Prépare un item propre par terrain, à partir des champs bruts trouvés au module 1 :
 
 | Variable Make   | Vient de (champ Data ES, à confirmer) |
 |-----------------|----------------------------------------|
@@ -59,7 +67,7 @@ Prépare un item propre par terrain, à partir des champs bruts trouvés au modu
 | `type_equipement` | type d'équipement                     |
 | `acces_libre`   | à déduire du champ "accès libre" si présent, sinon `true` par défaut |
 
-## Module 4 — AI : Anthropic (Claude) — Create a Message
+## Module 3 — AI : Anthropic (Claude) — Create a Message
 
 Rôle : Claude est ici **un module spécialisé dans un chemin prédéfini** (pas un
 agent) — il reçoit la donnée transformée, produit une sortie structurée, rien de plus.
@@ -81,7 +89,7 @@ agent) — il reçoit la donnée transformée, produit une sortie structurée, r
 - Parse la réponse JSON de Claude (module JSON > Parse JSON) pour obtenir
   `ai_accroche` et `ai_categorie` en variables exploitables au module suivant.
 
-## Module 5 — SAVE : Supabase — Create a Row (ou Upsert a Row si disponible)
+## Module 4 — SAVE : Supabase — Create a Row (ou Upsert a Row si disponible)
 
 Table : `terrains` (créée via `supabase/schema.sql`).
 
@@ -110,7 +118,7 @@ brief) et ne créer que les nouvelles lignes.
 ## Definition of Done (calquée sur le brief, page "Definition of Done J2")
 
 - [ ] Une vraie source (Data ES)
-- [ ] Un déclencheur (Schedule)
+- [ ] Un déclencheur (scénario programmé "At regular intervals")
 - [ ] Un scénario Make qui tourne sans erreur
 - [ ] Un traitement IA (Claude, sortie structurée)
 - [ ] Une écriture Supabase (`terrains`)
