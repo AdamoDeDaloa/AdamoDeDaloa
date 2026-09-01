@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Streetball — Trouve ton match</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --asphalt: #15191D;
+    --asphalt-soft: #20262C;
+    --orange: #FF6B2C;
+    --net: #2F6E52;
+    --chalk: #F5F2EC;
+    --concrete: #E8E3DA;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--concrete);
+    color: var(--asphalt);
+  }
+
+  header {
+    background: var(--asphalt);
+    color: var(--chalk);
+    padding: 28px 20px 22px;
+  }
+
+  header .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--orange);
+    margin-bottom: 8px;
+  }
+
+  header h1 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 34px;
+    margin: 0 0 18px;
+    line-height: 1.02;
+  }
+
+  .search-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  #search {
+    flex: 1;
+    min-width: 180px;
+    padding: 12px 16px;
+    border-radius: 100px;
+    border: none;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    background: var(--asphalt-soft);
+    color: var(--chalk);
+  }
+  #search::placeholder { color: rgba(245,242,236,0.5); }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    padding: 9px 16px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--asphalt-soft);
+    color: var(--chalk);
+    cursor: pointer;
+    border: none;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.15s;
+  }
+  .pill.active {
+    background: var(--orange);
+    color: #fff;
+  }
+
+  main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 20px 60px;
+  }
+
+  #count {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(21,25,29,0.6);
+    margin-bottom: 14px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  }
+
+  .card .level {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: var(--net);
+    background: rgba(47,110,82,0.1);
+    padding: 4px 10px;
+    border-radius: 100px;
+    margin-bottom: 10px;
+  }
+
+  .card h3 {
+    font-size: 17px;
+    margin: 0 0 4px;
+  }
+
+  .card .place {
+    font-size: 12.5px;
+    color: rgba(21,25,29,0.55);
+    margin-bottom: 12px;
+  }
+
+  .card .chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--concrete);
+    padding: 5px 10px;
+    border-radius: 8px;
+  }
+
+  #empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(21,25,29,0.5);
+    font-size: 14px;
+    display: none;
+  }
+
+  /* Detail overlay */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(21,25,29,0.6);
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 10;
+  }
+  #overlay.open { display: flex; }
+
+  #detail {
+    background: var(--chalk);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 28px 28px 0 0;
+    padding: 24px 22px 30px;
+    max-height: 85vh;
+    overflow-y: auto;
+    animation: slideUp 0.2s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  #detail .close {
+    background: none;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    color: rgba(21,25,29,0.5);
+    cursor: pointer;
+    margin-bottom: 14px;
+    padding: 0;
+  }
+
+  #detail .eyebrow2 {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--net);
+    letter-spacing: 0.3px;
+    margin-bottom: 6px;
+  }
+
+  #detail h2 {
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 28px;
+    margin: 0 0 14px;
+  }
+
+  #detail .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  .session-block {
+    background: var(--asphalt);
+    color: var(--chalk);
+    border-radius: 18px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .session-block .label { font-size: 13px; font-weight: 800; margin-bottom: 3px; }
+  .session-block .sub { font-size: 12px; color: rgba(245,242,236,0.6); }
+
+  #join-btn {
+    width: 100%;
+    padding: 15px 0;
+    border-radius: 100px;
+    border: none;
+    font-size: 14.5px;
+    font-weight: 800;
+    cursor: pointer;
+    background: var(--orange);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    transition: background 0.15s;
+  }
+  #join-btn.joined {
+    background: var(--net);
+  }
+
+  @media (max-width: 640px) {
+    header h1 { font-size: 28px; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">STREETBALL · PARIS</div>
+  <h1>Trouve ton<br/>prochain match</h1>
+  <div class="search-row">
+    <input id="search" type="text" placeholder="Chercher un terrain ou un quartier..." />
+  </div>
+  <div class="filters" id="filters">
+    <button class="pill active" data-level="Tous">Tous niveaux</button>
+    <button class="pill" data-level="Débutant">Débutant</button>
+    <button class="pill" data-level="Intermédiaire">Intermédiaire</button>
+    <button class="pill" data-level="Confirmé">Confirmé</button>
+  </div>
+</header>
+
+<main>
+  <div id="count"></div>
+  <div class="grid" id="grid"></div>
+  <div id="empty">Aucun terrain ne correspond à ta recherche.</div>
+</main>
+
+<div id="overlay">
+  <div id="detail"></div>
+</div>
+
+<script>
+  const terrains = [
+    {
+      id: 1, name: "City Stade Voltaire", quartier: "Paris 11e", niveau: "Intermédiaire",
+      surface: "Bitume", eclairage: "Éclairé", joueurs: "6/10",
+      session: { heure: "Aujourd'hui, 18h30", format: "3x3" }
+    },
+    {
+      id: 2, name: "Terrain Duperré", quartier: "Paris 11e", niveau: "Tous niveaux",
+      surface: "Bitume", eclairage: "Non éclairé", joueurs: "3/10",
+      session: { heure: "Aujourd'hui, 17h00", format: "Shootaround libre" }
+    },
+    {
+      id: 3, name: "Street Ball Jemmapes", quartier: "Paris 10e", niveau: "Confirmé",
+      surface: "Bitume", eclairage: "Éclairé", joueurs: "8/10",
+      session: { heure: "Demain, 19h00", format: "5x5" }
+    },
+    {
+      id: 4, name: "Terrain Paturle", quartier: "Paris 14e", niveau: "Débutant",
+      surface: "Résine", eclairage: "Éclairé", joueurs: "2/8",
+      session: { heure: "Aujourd'hui, 16h00", format: "Initiation" }
+    },
+    {
+      id: 5, name: "Jordan Legacy Court", quartier: "Paris 20e", niveau: "Intermédiaire",
+      surface: "Résine", eclairage: "Non éclairé", joueurs: "5/10",
+      session: { heure: "Demain, 18h00", format: "3x3" }
+    },
+    {
+      id: 6, name: "Playground Saint-Paul", quartier: "Paris 4e", niveau: "Débutant",
+      surface: "Bitume", eclairage: "Non éclairé", joueurs: "4/10",
+      session: { heure: "Ce week-end, 11h00", format: "Pick-up game" }
+    },
+  ];
+
+  let activeLevel = "Tous";
+  let searchTerm = "";
+  const joinedSessions = new Set();
+
+  const grid = document.getElementById("grid");
+  const empty = document.getElementById("empty");
+  const count = document.getElementById("count");
+  const overlay = document.getElementById("overlay");
+  const detail = document.getElementById("detail");
+
+  function render() {
+    const filtered = terrains.filter(t => {
+      const matchLevel = activeLevel === "Tous" || t.niveau === activeLevel || t.niveau === "Tous niveaux";
+      const q = searchTerm.toLowerCase();
+      const matchSearch = t.name.toLowerCase().includes(q) || t.quartier.toLowerCase().includes(q);
+      return matchLevel && matchSearch;
+    });
+
+    count.textContent = filtered.length + " terrain" + (filtered.length > 1 ? "s trouvés" : " trouvé");
+    grid.innerHTML = "";
+    empty.style.display = filtered.length === 0 ? "block" : "none";
+
+    filtered.forEach(t => {
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
+        <div class="level">${t.niveau.toUpperCase()}</div>
+        <h3>${t.name}</h3>
+        <div class="place">${t.quartier}</div>
+        <div class="chips">
+          <div class="chip">${t.session.heure}</div>
+          <div class="chip">${t.joueurs} joueurs</div>
+        </div>
+      `;
+      card.addEventListener("click", () => openDetail(t));
+      grid.appendChild(card);
+    });
+  }
+
+  function openDetail(t) {
+    const joined = joinedSessions.has(t.id);
+    detail.innerHTML = `
+      <button class="close" id="close-btn">← Fermer</button>
+      <div class="eyebrow2">${t.quartier.toUpperCase()}</div>
+      <h2>${t.name}</h2>
+      <div class="chips">
+        <div class="chip">${t.surface}</div>
+        <div class="chip">${t.eclairage}</div>
+        <div class="chip">${t.niveau}</div>
+      </div>
+      <div class="session-block">
+        <div class="label">${t.session.format}</div>
+        <div class="sub">${t.session.heure} · ${t.joueurs} joueurs inscrits</div>
+      </div>
+      <button id="join-btn" class="${joined ? 'joined' : ''}">${joined ? '✓ Tu es inscrit' : 'Rejoindre la session'}</button>
+    `;
+    overlay.classList.add("open");
+    document.getElementById("close-btn").addEventListener("click", closeDetail);
+    document.getElementById("join-btn").addEventListener("click", (e) => {
+      if (joinedSessions.has(t.id)) {
+        joinedSessions.delete(t.id);
+      } else {
+        joinedSessions.add(t.id);
+      }
+      openDetail(t);
+    });
+  }
+
+  function closeDetail() {
+    overlay.classList.remove("open");
+  }
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeDetail();
+  });
+
+  document.getElementById("filters").addEventListener("click", (e) => {
+    if (!e.target.classList.contains("pill")) return;
+    document.querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    e.target.classList.add("active");
+    activeLevel = e.target.dataset.level;
+    render();
+  });
+
+  document.getElementById("search").addEventListener("input", (e) => {
+    searchTerm = e.target.value;
+    render();
+  });
+
+  render();
+</script>
+
+</body>
+</html>
