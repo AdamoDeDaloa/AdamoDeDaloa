@@ -351,6 +351,13 @@
     #carte-map { height: 320px; }
     .carte-list { max-height: 360px; }
   }
+
+  .terrain-marker {
+    background: var(--orange);
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
 </style>
 </head>
 <body>
@@ -359,7 +366,7 @@
   <div class="eyebrow">BE4BALL · PARIS</div>
   <h1>Trouve ton<br/>prochain match</h1>
   <div class="search-row">
-    <input id="search" type="text" placeholder="Chercher un terrain ou un quartier..." />
+    <input id="search" type="text" placeholder="Chercher un terrain ou un quartier..." aria-label="Chercher un terrain ou un quartier" />
   </div>
   <div class="filters" id="filters">
     <button class="pill active" data-level="Tous">Tous niveaux</button>
@@ -383,7 +390,7 @@
   <section data-view="carte">
     <div class="carte-banner" id="carte-banner"></div>
     <div class="search-row" style="margin-bottom: 14px;">
-      <input id="carte-search" type="text" placeholder="Chercher une commune ou un terrain..." />
+      <input id="carte-search" type="text" placeholder="Chercher une commune ou un terrain..." aria-label="Chercher une commune ou un terrain" />
     </div>
     <div class="carte-layout">
       <div class="carte-list" id="carte-list"></div>
@@ -571,6 +578,10 @@
       attribution: "&copy; OpenStreetMap contributors",
       maxZoom: 19
     }).addTo(carteMap);
+    // La carte est créée juste après que l'onglet devienne visible : force un
+    // recalcul de sa taille au cas où le navigateur n'aurait pas encore
+    // terminé la mise en page à cet instant précis.
+    setTimeout(() => carteMap.invalidateSize(), 0);
 
     document.getElementById("carte-search").addEventListener("input", (e) => {
       carteSearchTerm = e.target.value.toLowerCase();
@@ -613,6 +624,12 @@
       });
   }
 
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
   function renderCarte() {
     const list = document.getElementById("carte-list");
     carteMarkers.forEach(m => carteMap.removeLayer(m));
@@ -626,18 +643,26 @@
     });
 
     filtered.forEach(t => {
+      // t vient de Supabase (données Data ES + texte généré par l'IA) :
+      // on échappe systématiquement avant toute insertion dans le DOM.
+      const nom = escapeHtml(t.nom);
+      const commune = escapeHtml(t.commune);
+      const typeEquipement = escapeHtml(t.type_equipement);
+      const accroche = escapeHtml(t.ai_accroche);
+
       if (typeof t.latitude === "number" && typeof t.longitude === "number") {
-        const marker = L.marker([t.latitude, t.longitude]).addTo(carteMap);
-        marker.bindPopup(`<strong>${t.nom}</strong><br/>${t.commune || ""}`);
+        const dotIcon = L.divIcon({ className: "terrain-marker", iconSize: [14, 14] });
+        const marker = L.marker([t.latitude, t.longitude], { icon: dotIcon }).addTo(carteMap);
+        marker.bindPopup(`<strong>${nom}</strong><br/>${commune}`);
         carteMarkers.push(marker);
       }
 
       const item = document.createElement("div");
       item.className = "terrain-item";
       item.innerHTML = `
-        <h4>${t.nom}</h4>
-        <div class="terrain-place">${[t.commune, t.type_equipement].filter(Boolean).join(" · ")}</div>
-        ${t.ai_accroche ? `<div class="terrain-accroche">${t.ai_accroche}</div>` : ""}
+        <h4>${nom}</h4>
+        <div class="terrain-place">${[commune, typeEquipement].filter(Boolean).join(" · ")}</div>
+        ${t.ai_accroche ? `<div class="terrain-accroche">${accroche}</div>` : ""}
       `;
       item.addEventListener("click", () => {
         if (typeof t.latitude === "number" && typeof t.longitude === "number") {
