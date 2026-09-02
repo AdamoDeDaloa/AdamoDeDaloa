@@ -18,7 +18,7 @@
 - Notifications de nouvelles sessions
 - Historique des sessions jouées
 
-## NOW — J2 Automate (récupérer les vrais terrains, source réelle)
+## FAIT — J2 Automate (récupérer les vrais terrains, source réelle)
 
 **MUST**
 - [x] Trouver une base de données complète des terrains de basket en France
@@ -30,17 +30,21 @@
 - [x] Ajouter la carte interactive au frontend (onglet "Carte France",
       Leaflet + lecture Supabase), avec exemple de démo tant que Supabase
       n'est pas branché
-- [ ] Construire réellement le scénario dans Make et exécuter `schema.sql`
-      dans Supabase (à faire côté utilisateur — Claude Code n'a pas accès à
-      ces comptes ni au réseau externe depuis ce sandbox)
-- [ ] Une vraie donnée qui a traversé tout le pipeline, visible dans l'app
+- [x] Construire réellement le scénario dans Make et exécuter `schema.sql`
+      dans Supabase — scénario programmé "Daily at 14:00"
+- [x] Une vraie donnée qui a traversé tout le pipeline, visible dans l'app
+      → 20 terrains vérifiés en production (GitHub Pages)
+
+**J2 : terminé.**
 
 **SHOULD** (pas ce sprint, mais proches)
-- Automatiser la création/mise à jour des fiches terrain (upsert sur `source_id`)
+- Automatiser la création/mise à jour des fiches terrain (upsert sur `source_id`,
+  pour éviter les doublons aux prochains runs)
+- Augmenter `limit` au-delà de 20 pour couvrir plus de terrains
 - Base de données des sessions (créées par les utilisateurs, en temps réel)
 - Notifications automatiques (rappel de session, nouvelle session près de chez soi)
 
-## LATER — J3 Augment (préparé, à construire une fois le J2 terminé)
+## NOW — J3 Augment (préparé, à construire)
 
 Plan détaillé : `automation/AGENT_J3.md`. Un agent ≠ une automatisation — il
 reçoit un objectif et choisit lui-même son chemin (pas de TRIGGER→GET→SAVE fixe).

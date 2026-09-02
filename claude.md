@@ -122,20 +122,46 @@ après la bascule, carte + liste + recherche par commune sur l'onglet Carte
 France, timeout de 8s avec message clair si Supabase est injoignable (au lieu
 de rester bloqué sur "Chargement...").
 
+**Le scénario Make a été construit et tourne réellement** (par Adama, dans
+son compte Make) : HTTP (GET Data ES, filtre `aps_name like "Basket"`) →
+Iterator → Set multiple variables → Make AI Toolkit (enrichissement,
+alternative à l'API Anthropic directe) → Parse JSON → Supabase Create a Row.
+Programmé "Daily at 14:00". Champs Data ES confirmés en direct : `equip_numero`,
+`equip_nom`, `new_name`, `inst_cp`, `inst_adresse`, `equip_x`/`equip_y`,
+`equip_type_name`, `equip_acc_libre`, `aps_name` (voir `automation/MAKE_SCENARIO.md`
+pour le détail).
+
+**Vérifié en production** (`https://adamodedaloa.github.io/AdamoDeDaloa/streetball-app.html`,
+hébergé via GitHub Pages) : 20 vrais terrains de basket chargés depuis
+Supabase, affichés sur une vraie carte OpenStreetMap partout en France
+(Albi, Saint-Ouen-sur-Seine, Vitrolles, Fleury-sur-Andelle, Le Bouscat...),
+avec accroche générée par l'IA pour chacun.
+
+**Sprint de correction de défauts (après mise en prod)**
+- Faille XSS corrigée : `nom`/`commune`/`type_equipement`/`ai_accroche`
+  viennent de Supabase (Data ES + texte IA) et étaient insérés dans le DOM
+  sans échappement — ajout d'un `escapeHtml()` systématique, testé avec une
+  tentative d'injection réelle (neutralisée).
+- Classe CSS `.terrain-marker` manquante (marqueurs invisibles) — corrigée.
+- `carteMap.invalidateSize()` ajouté par précaution après création de la carte.
+- `aria-label` ajoutés sur les deux barres de recherche.
+
 **Definition of Done — J2**
 - [x] Une vraie source identifiée (Data ES)
-- [ ] Un déclencheur Make (Schedule) — à créer dans ton compte Make
-- [ ] Un scénario Make qui tourne sans erreur — à construire avec `automation/MAKE_SCENARIO.md`
-- [ ] Un traitement IA (Claude) — prompt fourni, à brancher dans Make
-- [ ] Une écriture Supabase — `supabase/schema.sql` prêt à exécuter
-- [x] Une lecture Supabase depuis le frontend (onglet Carte France, code prêt)
-- [ ] Une donnée réelle visible dans l'app — dès que Make aura tourné une fois
-- [x] Le flux testé brique par brique côté code (voir ci-dessus)
+- [x] Un déclencheur Make (scénario programmé "Daily at 14:00")
+- [x] Un scénario Make qui tourne sans erreur
+- [x] Un traitement IA (Make AI Toolkit, sortie JSON structurée)
+- [x] Une écriture Supabase (table `terrains`)
+- [x] Une lecture Supabase depuis le frontend (onglet Carte France)
+- [x] Une donnée réelle visible dans l'app (20 terrains, en production)
+- [x] Le flux testé brique par brique, puis vérifié de bout en bout en prod
 
-**Prochaine étape concrète** : exécuter `supabase/schema.sql` dans ton projet
-Supabase, construire le scénario Make en suivant `automation/MAKE_SCENARIO.md`
-module par module (en testant chaque module avant le suivant), puis renseigner
-`SUPABASE_URL`/`SUPABASE_ANON_KEY` dans `streetball-app.html`.
+**J2 Automate : terminé.**
+
+## Déploiement
+
+L'app est hébergée via GitHub Pages depuis cette branche :
+`https://adamodedaloa.github.io/AdamoDeDaloa/streetball-app.html`
 
 ## Fichiers du projet
 
