@@ -29,13 +29,13 @@ devient un **tool** que l'agent peut déclencher (ACTION).
    ajouter un favori. Tu ne peux pas supprimer ou modifier les informations
    d'un terrain, ni réserver un créneau (cette fonctionnalité n'existe pas). »
 
-### Les 3 tools (READ → WRITE → ACTION, comme le brief)
+### Les tools (READ → WRITE, comme le brief)
 
-| Tool | Type | Ce qu'il fait |
-|---|---|---|
-| `search_terrains` | READ | Interroge la table `terrains` (Supabase "Search Rows") filtrée par commune / type d'équipement / nom |
-| `add_favori` | WRITE | Ajoute une ligne dans une nouvelle table `favoris` (Supabase "Create a Row") |
-| `refresh_terrains` | ACTION | Relance le scénario Make du J2 à la demande (au lieu d'attendre le prochain "Daily at 14:00") |
+| Tool | Type | Ce qu'il fait | Statut |
+|---|---|---|---|
+| `search_terrains` | READ | Interroge la table `terrains` (Supabase "Search Rows") filtrée par commune | ✅ testé, fonctionne |
+| `add_favori` | WRITE | Ajoute une ligne dans la table `favoris` (Supabase "Create a Row") | ✅ testé, fonctionne |
+| ~~`refresh_terrains`~~ | ~~ACTION~~ | ~~Relance le scénario Make du J2 à la demande~~ | ❌ retiré — le module "Run a scenario" nécessite un forfait Make payant. Le J2 continue de tourner tout seul chaque jour ("Daily at 14:00"), juste sans déclenchement à la demande depuis l'agent. |
 
 Un bon tool fait une chose claire (page 13 du brief) — pas de
 `manage_everything`.
@@ -101,11 +101,15 @@ choisi ? avec quels paramètres ? qu'a-t-il fait du résultat ?).
 
 ## Testez les limites (page 32 du brief)
 
-- Demande claire : « Trouve un terrain à Lyon »
-- Demande ambiguë : « Trouve-moi un bon terrain » (aucun critère donné)
-- Demande impossible : « Réserve-moi un terrain ce soir » (aucune fonction de
-  réservation n'existe — l'agent doit le dire, pas inventer une réservation)
-- Action non autorisée : « Supprime tous les terrains de Paris »
+- [x] Demande claire : « Trouve-moi un terrain à Marseille / Albi » → `search_terrains` appelé, vraie donnée retournée
+- [x] Demande impossible : « Réserve-moi un terrain à Lyon ce soir » → refusé explicitement
+  ("Je ne peux pas effectuer de réservation de terrain"), sans halluciner ; l'agent a
+  quand même cherché un vrai terrain à Lyon via `search_terrains` et proposé la suite
+- [x] WRITE explicite : « Ajoute le terrain "Stade réplique basket" à Lyon à mes
+  favoris, ma session est test123 » → `search_terrains` puis `add_favori` appelés
+  dans le bon ordre, favori bien enregistré
+- [ ] Demande ambiguë : « Trouve-moi un bon terrain » (aucun critère donné) — à tester
+- [ ] Action non autorisée : « Supprime tous les terrains de Paris » — à tester
 
 ## Reconnecter l'agent au produit (Acte 6 du brief)
 
@@ -123,14 +127,22 @@ URL de webhook fonctionnelle côté Make.
 
 ## Definition of Done J3 (adaptée)
 
-- [ ] Agent créé avec instructions claires (CADRER)
-- [ ] `search_terrains` connecté et testé
-- [ ] `add_favori` connecté et testé (table `favoris` créée au préalable)
-- [ ] `refresh_terrains` connecté et testé
-- [ ] Comportement observé pas à pas sur plusieurs demandes (pas juste une)
-- [ ] Testé sur une demande ambiguë et une demande impossible
+- [x] Agent créé avec instructions claires (CADRER)
+- [x] `search_terrains` connecté et testé
+- [x] `add_favori` connecté et testé (table `favoris` créée au préalable)
+- [x] ~~`refresh_terrains` connecté et testé~~ → retiré (forfait Make payant requis)
+- [x] Comportement observé pas à pas sur plusieurs demandes (pas juste une)
+- [x] Testé sur une demande impossible (refus explicite, pas d'hallucination)
+- [ ] Testé sur une demande ambiguë et une action non autorisée
 - [ ] Onglet "Assistant" ajouté à `streetball-app.html`, connecté au webhook
 - [ ] Une vraie conversation testée depuis l'app, pas juste dans Make
+
+**MVP agentique validé : READ + WRITE réels, refus intelligent d'une action
+impossible.** Reste : reconnecter au frontend, puis le sprint comptes
+utilisateurs (voir `ACCOUNTS.md`) qui fait évoluer `favoris` de
+`session_id` vers un vrai `user_id` — UI de connexion déjà ajoutée dans
+`streetball-app.html`, migration SQL prête dans
+`supabase/migrations/002_user_accounts.sql`.
 
 ## Debug (mantra du brief)
 

@@ -358,11 +358,69 @@
     border-radius: 50%;
     box-shadow: 0 1px 4px rgba(0,0,0,0.4);
   }
+
+  /* Connexion (comptes utilisateurs) */
+  .auth-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 12px;
+    min-height: 26px;
+  }
+
+  .auth-form {
+    display: flex;
+    gap: 6px;
+  }
+
+  .auth-form input {
+    padding: 6px 12px;
+    border-radius: 100px;
+    border: none;
+    font-size: 12px;
+    font-family: 'Inter', sans-serif;
+    background: var(--asphalt-soft);
+    color: var(--chalk);
+    width: 170px;
+  }
+  .auth-form input::placeholder { color: rgba(245,242,236,0.5); }
+
+  .auth-form button, .auth-status button {
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+  }
+  .auth-form button {
+    background: var(--orange);
+    color: #fff;
+  }
+  .auth-form button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  .auth-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--chalk);
+  }
+  .auth-status button {
+    background: none;
+    border: 1px solid rgba(245,242,236,0.3);
+    color: var(--chalk);
+  }
 </style>
 </head>
 <body>
 
 <header>
+  <div class="auth-bar" id="auth-bar"></div>
   <div class="eyebrow">BE4BALL · PARIS</div>
   <h1>Trouve ton<br/>prochain match</h1>
   <div class="search-row">
@@ -549,6 +607,69 @@
   const SUPABASE_URL = "https://nlegjcrbpwkuoykxgyky.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_4hT0w8KytK5huGIg1S7Nlw_OeuqeFll";
 
+  // Client Supabase partagé — créé une seule fois ici (pas dans
+  // initCarteFrance) pour que la connexion (comptes utilisateurs, voir
+  // ACCOUNTS.md) fonctionne dès le chargement de la page, quel que soit
+  // l'onglet ouvert.
+  const supabaseClient = (SUPABASE_URL && SUPABASE_ANON_KEY)
+    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  // Comptes utilisateurs (voir ACCOUNTS.md) — connexion par lien magique
+  // envoyé par email, gérée par Supabase Auth.
+  function renderAuthState(session) {
+    const bar = document.getElementById("auth-bar");
+    if (!bar) return;
+
+    if (!supabaseClient) {
+      bar.innerHTML = "";
+      return;
+    }
+
+    if (session && session.user) {
+      const email = escapeHtml(session.user.email || "");
+      bar.innerHTML = `
+        <div class="auth-status">
+          <span>${email}</span>
+          <button type="button" id="auth-signout">Se déconnecter</button>
+        </div>`;
+      document.getElementById("auth-signout").addEventListener("click", () => {
+        supabaseClient.auth.signOut();
+      });
+    } else {
+      bar.innerHTML = `
+        <form class="auth-form" id="auth-form">
+          <input type="email" id="auth-email" placeholder="ton email" required aria-label="Email de connexion">
+          <button type="submit">Recevoir un lien de connexion</button>
+        </form>`;
+      document.getElementById("auth-form").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById("auth-email");
+        const button = e.target.querySelector("button");
+        const email = emailInput.value.trim();
+        if (!email) return;
+        button.disabled = true;
+        button.textContent = "Envoi...";
+        supabaseClient.auth.signInWithOtp({ email }).then(({ error }) => {
+          if (error) {
+            button.disabled = false;
+            button.textContent = "Recevoir un lien de connexion";
+            alert("Erreur : " + error.message);
+            return;
+          }
+          button.textContent = "Lien envoyé, vérifie ta boîte mail !";
+        });
+      });
+    }
+  }
+
+  if (supabaseClient) {
+    supabaseClient.auth.onAuthStateChange((_event, session) => renderAuthState(session));
+    supabaseClient.auth.getSession().then(({ data }) => renderAuthState(data.session));
+  } else {
+    renderAuthState(null);
+  }
+
   // Exemple de démonstration affiché tant que Supabase n'est pas configuré,
   // pour que la carte ne soit pas vide pendant le développement.
   const DEMO_TERRAINS = [
@@ -571,7 +692,7 @@
     carteInitialized = true;
 
     const banner = document.getElementById("carte-banner");
-    const isConfigured = SUPABASE_URL && SUPABASE_ANON_KEY;
+    const isConfigured = !!supabaseClient;
 
     carteMap = L.map("carte-map").setView([46.6, 2.4], 5.5); // centré sur la France
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -599,11 +720,10 @@
     }
 
     banner.textContent = "Chargement des terrains...";
-    const client = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const timeout = new Promise((_, reject) =>
       setTimeout(() => reject(new Error("délai dépassé (8s)")), 8000)
     );
-    Promise.race([client.from("terrains").select("*").limit(500), timeout])
+    Promise.race([supabaseClient.from("terrains").select("*").limit(500), timeout])
       .then(({ data, error }) => {
         if (error) {
           banner.textContent = "Erreur de connexion à Supabase : " + error.message;
