@@ -415,6 +415,85 @@
     border: 1px solid rgba(245,242,236,0.3);
     color: var(--chalk);
   }
+
+  /* Assistant (agent J3) */
+  .assistant-layout {
+    display: flex;
+    flex-direction: column;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  .assistant-messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 320px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 4px 2px 12px;
+  }
+
+  .assistant-msg {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  .assistant-msg.user {
+    align-self: flex-end;
+    background: var(--orange);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .assistant-msg.agent {
+    align-self: flex-start;
+    background: #fff;
+    color: var(--asphalt);
+    border-bottom-left-radius: 4px;
+  }
+  .assistant-msg.error {
+    align-self: flex-start;
+    background: #fff;
+    color: #b3261e;
+    border: 1px solid #f2c6c2;
+  }
+  .assistant-msg.pending {
+    align-self: flex-start;
+    background: #fff;
+    color: rgba(21,25,29,0.5);
+    font-style: italic;
+  }
+
+  .assistant-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .assistant-form input {
+    flex: 1;
+    padding: 12px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--concrete);
+    font-size: 13.5px;
+    font-family: 'Inter', sans-serif;
+  }
+  .assistant-form button {
+    padding: 12px 22px;
+    border-radius: 100px;
+    border: none;
+    background: var(--orange);
+    color: #fff;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+  }
+  .assistant-form button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
 </style>
 </head>
 <body>
@@ -435,6 +514,7 @@
   <div class="tabs" id="tabs">
     <button class="tab active" data-tab="sessions">Sessions du quartier</button>
     <button class="tab" data-tab="carte">Carte France</button>
+    <button class="tab" data-tab="assistant">Assistant</button>
   </div>
 </header>
 
@@ -453,6 +533,21 @@
     <div class="carte-layout">
       <div class="carte-list" id="carte-list"></div>
       <div id="carte-map"></div>
+    </div>
+  </section>
+
+  <section data-view="assistant">
+    <div class="carte-banner" id="assistant-banner">
+      Discute avec l'assistant Be4Ball : il peut chercher un terrain
+      et ajouter un favori pour toi. Connecte-toi (en haut) pour que tes
+      favoris soient bien rattachés à ton compte.
+    </div>
+    <div class="assistant-layout">
+      <div class="assistant-messages" id="assistant-messages"></div>
+      <form class="assistant-form" id="assistant-form">
+        <input type="text" id="assistant-input" placeholder="Trouve-moi un terrain à..." aria-label="Message à l'assistant" autocomplete="off" />
+        <button type="submit">Envoyer</button>
+      </form>
     </div>
   </section>
 </main>
@@ -586,7 +681,7 @@
 
   render();
 
-  // Onglets Sessions / Carte France
+  // Onglets Sessions / Carte France / Assistant
   document.getElementById("tabs").addEventListener("click", (e) => {
     if (!e.target.classList.contains("tab")) return;
     const tabName = e.target.dataset.tab;
@@ -595,6 +690,7 @@
     document.querySelectorAll("[data-view]").forEach(v => v.classList.remove("active"));
     document.querySelector(`[data-view="${tabName}"]`).classList.add("active");
     if (tabName === "carte") initCarteFrance();
+    if (tabName === "assistant") initAssistant();
   });
 </script>
 
@@ -617,7 +713,10 @@
 
   // Comptes utilisateurs (voir ACCOUNTS.md) — connexion par lien magique
   // envoyé par email, gérée par Supabase Auth.
+  let currentSession = null;
+
   function renderAuthState(session) {
+    currentSession = session || null;
     const bar = document.getElementById("auth-bar");
     if (!bar) return;
 
@@ -671,6 +770,78 @@
     supabaseClient.auth.getSession().then(({ data }) => renderAuthState(data.session));
   } else {
     renderAuthState(null);
+  }
+
+  // Assistant — J3 : le frontend appelle le webhook de l'agent Make (voir
+  // automation/AGENT_J3.md). Le user_id du joueur connecté (currentSession,
+  // géré au-dessus) est transmis à chaque appel, pour que le tool add_favori
+  // de l'agent l'utilise au lieu d'un identifiant inventé.
+  const ASSISTANT_WEBHOOK_URL = "https://hook.eu1.make.com/nopwg6xbetbcf0hz2opwkr7xolwl5bp9";
+
+  let assistantInitialized = false;
+  let assistantConversationId = null;
+
+  function initAssistant() {
+    if (assistantInitialized) return;
+    assistantInitialized = true;
+
+    assistantConversationId = crypto.randomUUID();
+
+    document.getElementById("assistant-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      sendAssistantMessage();
+    });
+  }
+
+  function addAssistantMessage(text, kind) {
+    const messages = document.getElementById("assistant-messages");
+    const bubble = document.createElement("div");
+    bubble.className = "assistant-msg " + kind;
+    bubble.textContent = text;
+    messages.appendChild(bubble);
+    messages.scrollTop = messages.scrollHeight;
+    return bubble;
+  }
+
+  function sendAssistantMessage() {
+    const input = document.getElementById("assistant-input");
+    const button = document.querySelector("#assistant-form button");
+    const message = input.value.trim();
+    if (!message) return;
+
+    addAssistantMessage(message, "user");
+    input.value = "";
+    input.disabled = true;
+    button.disabled = true;
+    const pending = addAssistantMessage("...", "pending");
+
+    fetch(ASSISTANT_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: message,
+        user_id: currentSession && currentSession.user ? currentSession.user.id : null,
+        conversation_id: assistantConversationId
+      })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Erreur serveur (" + res.status + ")");
+        return res.json();
+      })
+      .then((data) => {
+        pending.remove();
+        const reply = (data && (data.reply || data.text || data.output)) || "(réponse vide)";
+        addAssistantMessage(reply, "agent");
+      })
+      .catch((err) => {
+        pending.remove();
+        addAssistantMessage("Impossible de joindre l'assistant (" + err.message + ").", "error");
+      })
+      .finally(() => {
+        input.disabled = false;
+        button.disabled = false;
+        input.focus();
+      });
   }
 
   // Exemple de démonstration affiché tant que Supabase n'est pas configuré,

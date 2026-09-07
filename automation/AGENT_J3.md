@@ -134,7 +134,12 @@ URL de webhook fonctionnelle côté Make.
 - [x] Comportement observé pas à pas sur plusieurs demandes (pas juste une)
 - [x] Testé sur une demande impossible (refus explicite, pas d'hallucination)
 - [ ] Testé sur une demande ambiguë et une action non autorisée
-- [ ] Onglet "Assistant" ajouté à `streetball-app.html`, connecté au webhook
+- [x] Onglet "Assistant" ajouté à `streetball-app.html`, connecté au webhook
+      (`https://hook.eu1.make.com/...`), transmet `message`, `user_id`
+      (compte connecté ou `null`) et `conversation_id` (généré par onglet/session)
+- [ ] Côté Make : structure du webhook (champs `message`/`user_id`/`conversation_id`),
+      mapping `message` → Input de l'agent, `conversation_id` → Conversation ID de
+      l'agent, module "Webhook response" renvoyant `{"reply": ...}`, scénario activé
 - [ ] Une vraie conversation testée depuis l'app, pas juste dans Make
 
 **MVP agentique validé : READ + WRITE réels, refus intelligent d'une action
