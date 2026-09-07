@@ -650,7 +650,10 @@
         if (!email) return;
         button.disabled = true;
         button.textContent = "Envoi...";
-        supabaseClient.auth.signInWithOtp({ email }).then(({ error }) => {
+        supabaseClient.auth.signInWithOtp({
+          email,
+          options: { emailRedirectTo: window.location.href }
+        }).then(({ error }) => {
           if (error) {
             button.disabled = false;
             button.textContent = "Recevoir un lien de connexion";
